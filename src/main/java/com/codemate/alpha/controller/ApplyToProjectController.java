@@ -3,7 +3,7 @@ package com.codemate.alpha.controller;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.codemate.alpha.entity.APPLY.ApplyToProject;
+import com.codemate.alpha.entity.ApplyToProject;
 import com.codemate.alpha.repository.ApplyToProjectRepository;
 
 import java.util.List;
