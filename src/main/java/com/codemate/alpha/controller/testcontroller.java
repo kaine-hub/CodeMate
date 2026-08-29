@@ -10,6 +10,7 @@ public class testcontroller {
     @GetMapping("test")
     public String getMethodName(@RequestParam String param) {
         return new String("Success");
+
         //
     }
 
