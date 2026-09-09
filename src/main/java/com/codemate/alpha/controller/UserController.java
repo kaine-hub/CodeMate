@@ -1,6 +1,6 @@
 package com.codemate.alpha.controller;
 
-import com.codemate.alpha.entity.USER.User;
+import com.codemate.alpha.entity.User;
 import com.codemate.alpha.repository.UserRepository;
 import com.codemate.alpha.response.UserResponse;
 import org.springframework.beans.factory.annotation.Autowired;

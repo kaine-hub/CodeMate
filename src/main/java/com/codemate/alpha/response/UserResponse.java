@@ -1,50 +1,42 @@
-package com.codemate.alpha.entity;
+package com.codemate.alpha.response;
 
-import jakarta.persistence.*;
+import com.codemate.alpha.entity.User;
 import java.time.LocalDateTime;
 
-@Entity
-@Table(name = "users")
-public class User {
+public class UserResponse {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long userId;
-
-    @Column(nullable = false, length = 50)
     private String firstName;
-
-    @Column(nullable = false, length = 50)
     private String lastName;
-
-    @Column(nullable = false, unique = true, length = 100)
     private String email;
-
-    @Column(nullable = false, length = 255)
-    private String password;
-
-    @Column(columnDefinition = "TEXT")
     private String bio;
-
-    @Column(length = 255)
     private String githubLink;
-
-    @Column(length = 255)
     private String linkedinLink;
-
-    @Column(length = 255)
     private String portfolioLink;
-
-    @Column(length = 255)
     private String profileImage;
-
-    @Column(length = 30)
     private String status;
-
-    @Column(nullable = false)
     private LocalDateTime createdAt;
 
-    public User() {
+    public UserResponse() {
+    }
+
+    public UserResponse(Long userId, String firstName, String lastName,
+                        String email, String bio, String githubLink,
+                        String linkedinLink, String portfolioLink,
+                        String profileImage, String status,
+                        LocalDateTime createdAt) {
+
+        this.userId = userId;
+        this.firstName = firstName;
+        this.lastName = lastName;
+        this.email = email;
+        this.bio = bio;
+        this.githubLink = githubLink;
+        this.linkedinLink = linkedinLink;
+        this.portfolioLink = portfolioLink;
+        this.profileImage = profileImage;
+        this.status = status;
+        this.createdAt = createdAt;
     }
 
     public Long getUserId() {
@@ -77,14 +69,6 @@ public class User {
 
     public void setEmail(String email) {
         this.email = email;
-    }
-
-    public String getPassword() {
-        return password;
-    }
-
-    public void setPassword(String password) {
-        this.password = password;
     }
 
     public String getBio() {
@@ -141,5 +125,21 @@ public class User {
 
     public void setCreatedAt(LocalDateTime createdAt) {
         this.createdAt = createdAt;
+    }
+
+    public static UserResponse from(User user) {
+        return new UserResponse(
+            user.getUserId(),
+            user.getFirstName(),
+            user.getLastName(),
+            user.getEmail(),
+            user.getBio(),
+            user.getGithubLink(),
+            user.getLinkedinLink(),
+            user.getPortfolioLink(),
+            user.getProfileImage(),
+            user.getStatus(),
+            user.getCreatedAt()
+        );
     }
 }

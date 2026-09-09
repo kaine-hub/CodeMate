@@ -1,10 +1,10 @@
-package com.codemate.alpha.entity.APPLY;
+package com.codemate.alpha.entity;
 
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
 
-import com.codemate.alpha.entity.USER.User;
-import com.codemate.alpha.entity.PROJECT.Project;
+import com.codemate.alpha.entity.User;
+import com.codemate.alpha.entity.Project;
 
 @Entity
 @Table(name = "apply_to_a_project")
