@@ -1,8 +1,8 @@
 package com.codemate.alpha.controller;
 
-import com.codemate.alpha.entity.USER.Skill;
-import com.codemate.alpha.entity.USER.User;
-import com.codemate.alpha.entity.USER.UserSkill;
+import com.codemate.alpha.entity.Skill;
+import com.codemate.alpha.entity.User;
+import com.codemate.alpha.entity.UserSkill;
 import com.codemate.alpha.repository.SkillRepository;
 import com.codemate.alpha.repository.UserRepository;
 import com.codemate.alpha.repository.UserSkillRepository;

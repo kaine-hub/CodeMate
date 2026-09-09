@@ -1,4 +1,4 @@
-package com.codemate.alpha.entity.PROJECT;
+package com.codemate.alpha.entity;
 
 import jakarta.persistence.*;
 import java.time.LocalDate;

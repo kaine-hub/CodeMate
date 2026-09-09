@@ -1,22 +1,20 @@
-package com.codemate.alpha.entity;
+package com.codemate.alpha.response;
 
-import jakarta.persistence.*;
+import com.codemate.alpha.entity.Skill;
 
-@Entity
-@Table(name = "skills")
-public class Skill {
+public class SkillResponse {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long skillId;
-
-    @Column(nullable = false, unique = true, length = 100)
     private String skillName;
-
-    @Column(columnDefinition = "TEXT")
     private String description;
 
-    public Skill() {
+    public SkillResponse() {
+    }
+
+    public SkillResponse(Long skillId, String skillName, String description) {
+        this.skillId = skillId;
+        this.skillName = skillName;
+        this.description = description;
     }
 
     public Long getSkillId() {
@@ -41,5 +39,13 @@ public class Skill {
 
     public void setDescription(String description) {
         this.description = description;
+    }
+
+    public static SkillResponse from(Skill skill) {
+        return new SkillResponse(
+            skill.getSkillId(),
+            skill.getSkillName(),
+            skill.getDescription()
+        );
     }
 }

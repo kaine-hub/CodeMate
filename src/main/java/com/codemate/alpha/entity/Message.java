@@ -1,9 +1,9 @@
-package com.codemate.alpha.entity.APPLY;
+package com.codemate.alpha.entity;
 
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
 
-import com.codemate.alpha.entity.USER.User;
+import com.codemate.alpha.entity.User;
 
 @Entity
 @Table(name = "messages")
