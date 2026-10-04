@@ -23,8 +23,7 @@ public class CompetitionController {
 
     @GetMapping
     public ResponseEntity<List<Competition>> getAllCompetitions() {
-        List<Competition> competitions = competitionRepository.findAll();
-        return ResponseEntity.ok(competitions);
+        return ResponseEntity.ok(competitionRepository.findAll());
     }
 
     @GetMapping("/{id}")
@@ -45,14 +44,22 @@ public class CompetitionController {
 
     @PostMapping
     public ResponseEntity<?> createCompetition(@RequestBody Competition competition) {
+        // a competition must belong to exactly one category (enforced by the single
+        // @ManyToOne "category" field on the entity itself, so nothing extra to check there)
         if (competition.getCategory() == null || competition.getCategory().getCategoryId() == null) {
             return ResponseEntity.badRequest().body("categoryId is required");
         }
-
         Category category = categoryRepository.findById(competition.getCategory().getCategoryId()).orElse(null);
         if (category == null) {
             return ResponseEntity.badRequest()
                     .body("Category not found with id: " + competition.getCategory().getCategoryId());
+        }
+
+        // website is not unique at the DB level, so enforce it here
+        if (competition.getWebsite() != null && !competition.getWebsite().isBlank()
+                && competitionRepository.existsByWebsite(competition.getWebsite())) {
+            return ResponseEntity.status(HttpStatus.CONFLICT)
+                    .body("This website link is already used by another competition.");
         }
 
         competition.setCategory(category);
@@ -74,11 +81,22 @@ public class CompetitionController {
                         existing.setCategory(category);
                     }
 
+                    String newWebsite = updatedCompetition.getWebsite();
+                    if (newWebsite != null && !newWebsite.isBlank() && !newWebsite.equals(existing.getWebsite())) {
+                        boolean takenBySomeoneElse = competitionRepository.findByWebsite(newWebsite)
+                                .filter(other -> !other.getCompetitionId().equals(id))
+                                .isPresent();
+                        if (takenBySomeoneElse) {
+                            return ResponseEntity.status(HttpStatus.CONFLICT)
+                                    .body("This website link is already used by another competition.");
+                        }
+                        existing.setWebsite(newWebsite);
+                    }
+
                     existing.setCompetitionName(updatedCompetition.getCompetitionName());
                     existing.setOrganizer(updatedCompetition.getOrganizer());
                     existing.setDescription(updatedCompetition.getDescription());
                     existing.setLocation(updatedCompetition.getLocation());
-                    existing.setWebsite(updatedCompetition.getWebsite());
                     existing.setRegistrationDeadline(updatedCompetition.getRegistrationDeadline());
                     existing.setStartDate(updatedCompetition.getStartDate());
                     existing.setEndDate(updatedCompetition.getEndDate());

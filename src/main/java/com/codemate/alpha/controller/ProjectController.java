@@ -34,8 +34,7 @@ public class ProjectController {
 
     @GetMapping
     public ResponseEntity<List<Project>> getAllProjects() {
-        List<Project> projects = projectRepository.findAll();
-        return ResponseEntity.ok(projects);
+        return ResponseEntity.ok(projectRepository.findAll());
     }
 
     @GetMapping("/{id}")
@@ -82,20 +81,25 @@ public class ProjectController {
                     .body("User not found with id: " + project.getPostedByUser().getUserId());
         }
 
-        if (project.getCompetition() != null && project.getCompetition().getCompetitionId() != null) {
-            Competition competition = competitionRepository.findById(project.getCompetition().getCompetitionId())
-                    .orElse(null);
+        // standalone projects (no competition) don't need githubLink/demoLink;
+        // projects submitted to a competition must have them filled in
+        boolean linkedToCompetition = project.getCompetition() != null && project.getCompetition().getCompetitionId() != null;
+        Competition competition = null;
+        if (linkedToCompetition) {
+            competition = competitionRepository.findById(project.getCompetition().getCompetitionId()).orElse(null);
             if (competition == null) {
                 return ResponseEntity.badRequest()
                         .body("Competition not found with id: " + project.getCompetition().getCompetitionId());
             }
-            project.setCompetition(competition);
-        } else {
-            project.setCompetition(null);
+            if (isBlank(project.getGithubLink()) || isBlank(project.getDemoLink())) {
+                return ResponseEntity.badRequest()
+                        .body("githubLink and demoLink are required when a project is linked to a competition");
+            }
         }
 
         project.setTeam(team);
         project.setPostedByUser(postedByUser);
+        project.setCompetition(competition);
         project.setCreatedAt(LocalDateTime.now());
 
         Project saved = projectRepository.save(project);
@@ -116,11 +120,21 @@ public class ProjectController {
                         }
                         existing.setCompetition(competition);
                     }
+                    // competition not touched here if omitted/null in the request body —
+                    // use DELETE /api/projects/{id}/competition below to unlink one explicitly
+
+                    String githubLink = updatedProject.getGithubLink() != null ? updatedProject.getGithubLink() : existing.getGithubLink();
+                    String demoLink = updatedProject.getDemoLink() != null ? updatedProject.getDemoLink() : existing.getDemoLink();
+
+                    if (existing.getCompetition() != null && (isBlank(githubLink) || isBlank(demoLink))) {
+                        return ResponseEntity.badRequest()
+                                .body("githubLink and demoLink are required when a project is linked to a competition");
+                    }
 
                     existing.setProjectTitle(updatedProject.getProjectTitle());
                     existing.setDescription(updatedProject.getDescription());
-                    existing.setGithubLink(updatedProject.getGithubLink());
-                    existing.setDemoLink(updatedProject.getDemoLink());
+                    existing.setGithubLink(githubLink);
+                    existing.setDemoLink(demoLink);
                     existing.setProjectStatus(updatedProject.getProjectStatus());
 
                     Project saved = projectRepository.save(existing);
@@ -136,5 +150,20 @@ public class ProjectController {
         }
         projectRepository.deleteById(id);
         return ResponseEntity.noContent().build();
+    }
+
+    @DeleteMapping("/{id}/competition")
+    public ResponseEntity<?> unlinkCompetition(@PathVariable Long id) {
+        return projectRepository.findById(id)
+                .map(existing -> {
+                    existing.setCompetition(null);
+                    Project saved = projectRepository.save(existing);
+                    return ResponseEntity.ok(saved);
+                })
+                .orElse(ResponseEntity.notFound().build());
+    }
+
+    private boolean isBlank(String value) {
+        return value == null || value.isBlank();
     }
 }
