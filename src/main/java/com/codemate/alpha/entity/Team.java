@@ -32,6 +32,16 @@ public class Team {
     public Team() {
     }
 
+    @PrePersist
+    protected void onCreate() {
+        if (currentMembers == null) {
+            currentMembers = 1;
+        }
+        if (recruitmentStatus == null || recruitmentStatus.isBlank()) {
+            recruitmentStatus = "OPEN";
+        }
+    }
+
     public Long getTeamId() {
         return teamId;
     }
