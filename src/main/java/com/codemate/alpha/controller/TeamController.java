@@ -211,7 +211,7 @@ public class TeamController {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Team not found with id: " + id);
         }
 
-        if (projectRepository.existsByTeam_TeamId(id)) {
+        if (projectRepository.existsById(id)) {
             return ResponseEntity.status(HttpStatus.CONFLICT)
                     .body("Cannot delete team: it still has projects. Delete the projects first.");
         }
