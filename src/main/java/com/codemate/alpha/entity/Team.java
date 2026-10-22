@@ -1,7 +1,7 @@
 
 package com.codemate.alpha.entity.TEAM;
 
-import com.codemate.alpha.entity.USER.User;
+import com.codemate.alpha.entity.User;
 
 import jakarta.persistence.*;
 

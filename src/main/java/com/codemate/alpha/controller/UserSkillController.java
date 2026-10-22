@@ -1,0 +1,111 @@
+package com.codemate.alpha.controller;
+
+import com.codemate.alpha.entity.Skill;
+import com.codemate.alpha.entity.User;
+import com.codemate.alpha.entity.UserSkill;
+import com.codemate.alpha.repository.SkillRepository;
+import com.codemate.alpha.repository.UserRepository;
+import com.codemate.alpha.repository.UserSkillRepository;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+import java.util.Set;
+
+@RestController
+@RequestMapping("/api/user-skills")
+public class UserSkillController {
+
+    private static final Set<String> LEVELS = Set.of("BEGINNER", "INTERMEDIATE", "ADVANCED", "EXPERT"); // <- put your real values here
+
+    @Autowired
+    private UserSkillRepository userSkillRepository;
+
+    @Autowired
+    private UserRepository userRepository;
+
+    @Autowired
+    private SkillRepository skillRepository;
+
+    @GetMapping
+    public ResponseEntity<List<UserSkill>> getAllUserSkills() {
+        return ResponseEntity.ok(userSkillRepository.findAll());
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<UserSkill> getUserSkillById(@PathVariable Long id) {
+        return userSkillRepository.findById(id)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
+    }
+
+    @GetMapping("/user/{userId}")
+    public ResponseEntity<List<UserSkill>> getSkillsByUser(@PathVariable Long userId) {
+        return ResponseEntity.ok(userSkillRepository.findByUser_UserId(userId));
+    }
+
+    @GetMapping("/skill/{skillId}")
+    public ResponseEntity<List<UserSkill>> getUsersBySkill(@PathVariable Long skillId) {
+        return ResponseEntity.ok(userSkillRepository.findBySkill_SkillId(skillId));
+    }
+
+    @PostMapping
+    public ResponseEntity<?> assignSkillToUser(@RequestParam Long userId,
+                                               @RequestParam Long skillId,
+                                               @RequestParam(required = false) String proficiencyLevel) {
+        User user = userRepository.findById(userId).orElse(null);
+        if (user == null) {
+            return ResponseEntity.badRequest().body("User not found with id: " + userId);
+        }
+
+        Skill skill = skillRepository.findById(skillId).orElse(null);
+        if (skill == null) {
+            return ResponseEntity.badRequest().body("Skill not found with id: " + skillId);
+        }
+
+        String level = null;
+        if (proficiencyLevel != null && !proficiencyLevel.isBlank()) {
+            level = proficiencyLevel.trim().toUpperCase();
+            if (!LEVELS.contains(level)) {
+                return ResponseEntity.badRequest().body("Invalid proficiency level. Allowed: " + LEVELS);
+            }
+        }
+
+        if (userSkillRepository.existsByUser_UserIdAndSkill_SkillId(userId, skillId)) {
+            return ResponseEntity.status(HttpStatus.CONFLICT).body("This skill is already assigned to the user.");
+        }
+
+        UserSkill userSkill = new UserSkill();
+        userSkill.setUser(user);
+        userSkill.setSkill(skill);
+        userSkill.setProficiencyLevel(level);
+
+        return ResponseEntity.status(HttpStatus.CREATED).body(userSkillRepository.save(userSkill));
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<?> updateProficiency(@PathVariable Long id,
+                                               @RequestParam String proficiencyLevel) {
+        String level = proficiencyLevel.trim().toUpperCase();
+        if (!LEVELS.contains(level)) {
+            return ResponseEntity.badRequest().body("Invalid proficiency level. Allowed: " + LEVELS);
+        }
+
+        UserSkill existing = userSkillRepository.findById(id).orElse(null);
+        if (existing == null) return ResponseEntity.notFound().build();
+
+        existing.setProficiencyLevel(level);
+        return ResponseEntity.ok(userSkillRepository.save(existing));
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> removeUserSkill(@PathVariable Long id) {
+        if (!userSkillRepository.existsById(id)) {
+            return ResponseEntity.notFound().build();
+        }
+        userSkillRepository.deleteById(id);
+        return ResponseEntity.noContent().build();
+    }
+}

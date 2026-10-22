@@ -3,7 +3,7 @@ package com.codemate.alpha.entity.TEAM;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
 
-import com.codemate.alpha.entity.USER.User;
+import com.codemate.alpha.entity.User;
 
 @Entity
 @Table(name = "team_members")
