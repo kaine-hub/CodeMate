@@ -4,4 +4,6 @@ import com.codemate.alpha.entity.Category;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface CategoryRepository extends JpaRepository<Category, Long> {
+    boolean existsByCategoryNameIgnoreCase(String name);
+    boolean existsByCategoryNameIgnoreCaseAndCategoryIdNot(String name, Long categoryId);
 }

@@ -6,7 +6,6 @@ import com.codemate.alpha.entity.User;
 import com.codemate.alpha.repository.TeamMemberRepository;
 import com.codemate.alpha.repository.TeamRepository;
 import com.codemate.alpha.repository.UserRepository;
-import com.codemate.alpha.response.TeamMemberResponse;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.transaction.annotation.Transactional;
@@ -33,35 +32,29 @@ public class TeamMemberController {
 
     // GET ALL TEAM MEMBERS
     @GetMapping
-    public ResponseEntity<List<TeamMemberResponse>> getAllTeamMembers() {
-        return ResponseEntity.ok(
-                teamMemberRepository.findAll()
-                        .stream().map(TeamMemberResponse::from).toList());
+    public ResponseEntity<List<TeamMember>> getAllTeamMembers() {
+        return ResponseEntity.ok(teamMemberRepository.findAll());
     }
 
     // GET TEAM MEMBER BY ID
     @GetMapping("/{id}")
     public ResponseEntity<?> getTeamMemberById(@PathVariable Long id) {
         return teamMemberRepository.findById(id)
-                .<ResponseEntity<?>>map(tm -> ResponseEntity.ok(TeamMemberResponse.from(tm)))
+                .<ResponseEntity<?>>map(tm -> ResponseEntity.ok(tm))
                 .orElse(ResponseEntity.status(HttpStatus.NOT_FOUND)
                         .body("Team member not found with id: " + id));
     }
 
     // GET MEMBERS OF A TEAM
     @GetMapping("/team/{teamId}")
-    public ResponseEntity<List<TeamMemberResponse>> getMembersByTeam(@PathVariable Long teamId) {
-        return ResponseEntity.ok(
-                teamMemberRepository.findByTeam_TeamId(teamId)
-                        .stream().map(TeamMemberResponse::from).toList());
+    public ResponseEntity<List<TeamMember>> getMembersByTeam(@PathVariable Long teamId) {
+        return ResponseEntity.ok(teamMemberRepository.findByTeam_TeamId(teamId));
     }
 
     // GET MEMBERSHIPS OF A USER
     @GetMapping("/user/{userId}")
-    public ResponseEntity<List<TeamMemberResponse>> getMembershipsByUser(@PathVariable Long userId) {
-        return ResponseEntity.ok(
-                teamMemberRepository.findByUser_UserId(userId)
-                        .stream().map(TeamMemberResponse::from).toList());
+    public ResponseEntity<List<TeamMember>> getMembershipsByUser(@PathVariable Long userId) {
+        return ResponseEntity.ok(teamMemberRepository.findByUser_UserId(userId));
     }
 
     // ADD MEMBER TO TEAM: POST /api/team-members?teamId=1&userId=2
@@ -100,7 +93,7 @@ public class TeamMemberController {
         }
         teamRepository.save(team);
 
-        return ResponseEntity.status(HttpStatus.CREATED).body(TeamMemberResponse.from(saved));
+        return ResponseEntity.status(HttpStatus.CREATED).body(saved);
     }
 
     // REMOVE MEMBER BY teamMemberId. The team leader cannot be removed.

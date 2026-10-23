@@ -10,4 +10,5 @@ public interface CompetitionRepository extends JpaRepository<Competition, Long> 
     boolean existsByWebsite(String website);
 
     Optional<Competition> findByWebsite(String website);
+    boolean existsByWebsiteAndCompetitionIdNot(String website, Long competitionId);
 }
