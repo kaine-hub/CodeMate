@@ -13,10 +13,13 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Set;
 
 @RestController
 @RequestMapping("/api/user-skills")
 public class UserSkillController {
+
+    private static final Set<String> LEVELS = Set.of("BEGINNER", "INTERMEDIATE", "ADVANCED", "EXPERT"); // <- put your real values here
 
     @Autowired
     private UserSkillRepository userSkillRepository;
@@ -28,6 +31,14 @@ public class UserSkillController {
     private SkillRepository skillRepository;
 
     @GetMapping
+    public ResponseEntity<List<UserSkill>> getAllUserSkills() {
+        return ResponseEntity.ok(userSkillRepository.findAll());
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<UserSkill> getUserSkillById(@PathVariable Long id) {
+        return userSkillRepository.findById(id)
+                .map(ResponseEntity::ok)
     public ResponseEntity<List<UserSkillResponse>> getAllUserSkills() {
         List<UserSkillResponse> userSkills = userSkillRepository.findAll()
                 .stream()
@@ -44,6 +55,13 @@ public class UserSkillController {
     }
 
     @GetMapping("/user/{userId}")
+    public ResponseEntity<List<UserSkill>> getSkillsByUser(@PathVariable Long userId) {
+        return ResponseEntity.ok(userSkillRepository.findByUser_UserId(userId));
+    }
+
+    @GetMapping("/skill/{skillId}")
+    public ResponseEntity<List<UserSkill>> getUsersBySkill(@PathVariable Long skillId) {
+        return ResponseEntity.ok(userSkillRepository.findBySkill_SkillId(skillId));
     public ResponseEntity<List<UserSkillResponse>> getSkillsByUser(@PathVariable Long userId) {
         List<UserSkillResponse> userSkills = userSkillRepository.findByUser_UserId(userId)
                 .stream()
@@ -63,6 +81,8 @@ public class UserSkillController {
 
     @PostMapping
     public ResponseEntity<?> assignSkillToUser(@RequestParam Long userId,
+                                               @RequestParam Long skillId,
+                                               @RequestParam(required = false) String proficiencyLevel) {
                                                 @RequestParam Long skillId,
                                                 @RequestParam(required = false) String proficiencyLevel) {
         User user = userRepository.findById(userId).orElse(null);
@@ -75,6 +95,14 @@ public class UserSkillController {
             return ResponseEntity.badRequest().body("Skill not found with id: " + skillId);
         }
 
+        String level = null;
+        if (proficiencyLevel != null && !proficiencyLevel.isBlank()) {
+            level = proficiencyLevel.trim().toUpperCase();
+            if (!LEVELS.contains(level)) {
+                return ResponseEntity.badRequest().body("Invalid proficiency level. Allowed: " + LEVELS);
+            }
+        }
+
         if (userSkillRepository.existsByUser_UserIdAndSkill_SkillId(userId, skillId)) {
             return ResponseEntity.status(HttpStatus.CONFLICT).body("This skill is already assigned to the user.");
         }
@@ -82,6 +110,24 @@ public class UserSkillController {
         UserSkill userSkill = new UserSkill();
         userSkill.setUser(user);
         userSkill.setSkill(skill);
+        userSkill.setProficiencyLevel(level);
+
+        return ResponseEntity.status(HttpStatus.CREATED).body(userSkillRepository.save(userSkill));
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<?> updateProficiency(@PathVariable Long id,
+                                               @RequestParam String proficiencyLevel) {
+        String level = proficiencyLevel.trim().toUpperCase();
+        if (!LEVELS.contains(level)) {
+            return ResponseEntity.badRequest().body("Invalid proficiency level. Allowed: " + LEVELS);
+        }
+
+        UserSkill existing = userSkillRepository.findById(id).orElse(null);
+        if (existing == null) return ResponseEntity.notFound().build();
+
+        existing.setProficiencyLevel(level);
+        return ResponseEntity.ok(userSkillRepository.save(existing));
         userSkill.setProficiencyLevel(proficiencyLevel);
 
         UserSkill saved = userSkillRepository.save(userSkill);

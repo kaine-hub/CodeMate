@@ -1,3 +1,4 @@
+package com.codemate.alpha.entity;
     package com.codemate.alpha.entity;
 
     import jakarta.persistence.*;
