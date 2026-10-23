@@ -1,5 +1,5 @@
 
-package com.codemate.alpha.entity.TEAM;
+package com.codemate.alpha.entity;
 
 import com.codemate.alpha.entity.User;
 
@@ -30,6 +30,16 @@ public class Team {
     private String recruitmentStatus;
 
     public Team() {
+    }
+
+    @PrePersist
+    protected void onCreate() {
+        if (currentMembers == null) {
+            currentMembers = 1;
+        }
+        if (recruitmentStatus == null || recruitmentStatus.isBlank()) {
+            recruitmentStatus = "OPEN";
+        }
     }
 
     public Long getTeamId() {

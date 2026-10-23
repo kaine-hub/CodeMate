@@ -1,4 +1,4 @@
-package com.codemate.alpha.entity.TEAM;
+package com.codemate.alpha.entity;
 
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
@@ -6,7 +6,10 @@ import java.time.LocalDateTime;
 import com.codemate.alpha.entity.User;
 
 @Entity
-@Table(name = "team_members")
+@Table(
+    name = "team_members",
+    uniqueConstraints = @UniqueConstraint(columnNames = {"team_id", "user_id"})
+)
 public class TeamMember {
 
     @Id
@@ -24,6 +27,13 @@ public class TeamMember {
     private LocalDateTime joinedAt;
 
     public TeamMember() {
+    }
+
+    @PrePersist
+    protected void onCreate() {
+        if (joinedAt == null) {
+            joinedAt = LocalDateTime.now();
+        }
     }
 
     public Long getTeamMemberId() {
