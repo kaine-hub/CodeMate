@@ -4,7 +4,7 @@ package com.codemate.alpha.entity;
 import com.codemate.alpha.entity.User;
 
 import jakarta.persistence.*;
-
+@SuppressWarnings("unused")
 @Entity
 @Table(name = "teams")
 public class Team {

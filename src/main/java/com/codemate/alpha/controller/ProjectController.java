@@ -23,7 +23,8 @@ import java.util.Set;
 @RequestMapping("/api/projects")
 public class ProjectController {
 
-    private static final Set<String> PROJECT_STATUSES = Set.of("OPEN", "IN_PROGRESS", "COMPLETED"); // <- put your real values here
+    private static final Set<String> PROJECT_STATUSES = Set.of("OPEN", "IN_PROGRESS", "COMPLETED"); // <- put your real
+                                                                                                    // values here
 
     @Autowired
     private ProjectRepository projectRepository;
@@ -37,15 +38,21 @@ public class ProjectController {
     @Autowired
     private CompetitionRepository competitionRepository;
 
-    private ResponseEntity<String> bad(String m)      { return ResponseEntity.badRequest().body(m); }
-    private ResponseEntity<String> conflict(String m) { return ResponseEntity.status(HttpStatus.CONFLICT).body(m); }
+    private ResponseEntity<String> bad(String m) {
+        return ResponseEntity.badRequest().body(m);
+    }
+
+    private ResponseEntity<String> conflict(String m) {
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(m);
+    }
 
     private boolean isBlank(String value) {
         return value == null || value.isBlank();
     }
 
     private static boolean isValidHttpUrl(String value) {
-        if (value == null || value.isBlank()) return false;
+        if (value == null || value.isBlank())
+            return false;
         try {
             URI uri = new URI(value.trim());
             String scheme = uri.getScheme();
@@ -59,17 +66,21 @@ public class ProjectController {
     }
 
     // call only after isValidHttpUrl passed.
-    // lowercases scheme+host, drops trailing slash and #fragment so formatting can't dodge duplicate checks
+    // lowercases scheme+host, drops trailing slash and #fragment so formatting
+    // can't dodge duplicate checks
     private static String normalizeUrl(String value) {
         URI u = URI.create(value.trim());
         String path = u.getRawPath() == null ? "" : u.getRawPath();
-        if (path.endsWith("/")) path = path.substring(0, path.length() - 1);
+        if (path.endsWith("/"))
+            path = path.substring(0, path.length() - 1);
         String out = u.getScheme().toLowerCase() + "://" + u.getRawAuthority().toLowerCase() + path;
-        if (u.getRawQuery() != null) out += "?" + u.getRawQuery();
+        if (u.getRawQuery() != null)
+            out += "?" + u.getRawQuery();
         return out;
     }
 
-    // returns an error message, or null if the team may be linked to this competition
+    // returns an error message, or null if the team may be linked to this
+    // competition
     private String checkCompetitionFits(Competition competition, Team team) {
         if (competition.getRegistrationDeadline() != null
                 && competition.getRegistrationDeadline().isBefore(LocalDate.now())) {
@@ -149,17 +160,21 @@ public class ProjectController {
         // links (optional, but valid + unique when present)
         String githubLink = null;
         if (!isBlank(project.getGithubLink())) {
-            if (!isValidHttpUrl(project.getGithubLink())) return bad("githubLink must be a valid http(s) URL");
+            if (!isValidHttpUrl(project.getGithubLink()))
+                return bad("githubLink must be a valid http(s) URL");
             githubLink = normalizeUrl(project.getGithubLink());
-            if (githubLink.length() > 255) return bad("githubLink must be at most 255 characters");
+            if (githubLink.length() > 255)
+                return bad("githubLink must be at most 255 characters");
             if (projectRepository.existsByGithubLink(githubLink))
                 return conflict("This GitHub link is already used by another project");
         }
         String demoLink = null;
         if (!isBlank(project.getDemoLink())) {
-            if (!isValidHttpUrl(project.getDemoLink())) return bad("demoLink must be a valid http(s) URL");
+            if (!isValidHttpUrl(project.getDemoLink()))
+                return bad("demoLink must be a valid http(s) URL");
             demoLink = normalizeUrl(project.getDemoLink());
-            if (demoLink.length() > 255) return bad("demoLink must be at most 255 characters");
+            if (demoLink.length() > 255)
+                return bad("demoLink must be at most 255 characters");
             if (projectRepository.existsByDemoLink(demoLink))
                 return conflict("This demo link is already used by another project");
         }
@@ -173,7 +188,8 @@ public class ProjectController {
                 return bad("Competition not found with id: " + project.getCompetition().getCompetitionId());
             }
             String problem = checkCompetitionFits(competition, team);
-            if (problem != null) return bad(problem);
+            if (problem != null)
+                return bad(problem);
             if (githubLink == null || demoLink == null) {
                 return bad("githubLink and demoLink are required when a project is linked to a competition");
             }
@@ -196,20 +212,23 @@ public class ProjectController {
     public ResponseEntity<?> updateProject(@PathVariable Long id, @RequestBody Project updated) {
 
         Project existing = projectRepository.findById(id).orElse(null);
-        if (existing == null) return ResponseEntity.notFound().build();
+        if (existing == null)
+            return ResponseEntity.notFound().build();
 
         // title
         String title = existing.getProjectTitle();
         if (updated.getProjectTitle() != null) {
             title = updated.getProjectTitle().trim();
-            if (title.isEmpty() || title.length() > 150) return bad("Project title must be 1-150 characters");
+            if (title.isEmpty() || title.length() > 150)
+                return bad("Project title must be 1-150 characters");
         }
 
         // status
         String status = existing.getProjectStatus();
         if (updated.getProjectStatus() != null) {
             status = updated.getProjectStatus().trim().toUpperCase();
-            if (!PROJECT_STATUSES.contains(status)) return bad("Invalid project status. Allowed: " + PROJECT_STATUSES);
+            if (!PROJECT_STATUSES.contains(status))
+                return bad("Invalid project status. Allowed: " + PROJECT_STATUSES);
         }
 
         // github link: valid + normalized + unique among OTHER projects
@@ -218,9 +237,11 @@ public class ProjectController {
             if (updated.getGithubLink().isBlank()) {
                 githubLink = null;
             } else {
-                if (!isValidHttpUrl(updated.getGithubLink())) return bad("githubLink must be a valid http(s) URL");
+                if (!isValidHttpUrl(updated.getGithubLink()))
+                    return bad("githubLink must be a valid http(s) URL");
                 githubLink = normalizeUrl(updated.getGithubLink());
-                if (githubLink.length() > 255) return bad("githubLink must be at most 255 characters");
+                if (githubLink.length() > 255)
+                    return bad("githubLink must be at most 255 characters");
                 if (projectRepository.existsByGithubLinkAndProjectIdNot(githubLink, id))
                     return conflict("This GitHub link is already used by another project");
             }
@@ -232,27 +253,32 @@ public class ProjectController {
             if (updated.getDemoLink().isBlank()) {
                 demoLink = null;
             } else {
-                if (!isValidHttpUrl(updated.getDemoLink())) return bad("demoLink must be a valid http(s) URL");
+                if (!isValidHttpUrl(updated.getDemoLink()))
+                    return bad("demoLink must be a valid http(s) URL");
                 demoLink = normalizeUrl(updated.getDemoLink());
-                if (demoLink.length() > 255) return bad("demoLink must be at most 255 characters");
+                if (demoLink.length() > 255)
+                    return bad("demoLink must be at most 255 characters");
                 if (projectRepository.existsByDemoLinkAndProjectIdNot(demoLink, id))
                     return conflict("This demo link is already used by another project");
             }
         }
 
         // competition: only re-checked when a DIFFERENT one is being linked.
-        // competition omitted/null in the body = untouched; use DELETE /{id}/competition to unlink
+        // competition omitted/null in the body = untouched; use DELETE
+        // /{id}/competition to unlink
         Competition competition = existing.getCompetition();
         if (updated.getCompetition() != null && updated.getCompetition().getCompetitionId() != null) {
             Long newId = updated.getCompetition().getCompetitionId();
             competition = competitionRepository.findById(newId).orElse(null);
-            if (competition == null) return bad("Competition not found with id: " + newId);
+            if (competition == null)
+                return bad("Competition not found with id: " + newId);
 
             boolean changed = existing.getCompetition() == null
                     || !existing.getCompetition().getCompetitionId().equals(newId);
             if (changed) {
                 String problem = checkCompetitionFits(competition, existing.getTeam());
-                if (problem != null) return bad(problem);
+                if (problem != null)
+                    return bad(problem);
             }
         }
         if (competition != null && (githubLink == null || demoLink == null)) {
@@ -265,7 +291,8 @@ public class ProjectController {
         existing.setGithubLink(githubLink);
         existing.setDemoLink(demoLink);
         existing.setCompetition(competition);
-        if (updated.getDescription() != null) existing.setDescription(updated.getDescription());
+        if (updated.getDescription() != null)
+            existing.setDescription(updated.getDescription());
 
         return ResponseEntity.ok(projectRepository.save(existing));
     }
