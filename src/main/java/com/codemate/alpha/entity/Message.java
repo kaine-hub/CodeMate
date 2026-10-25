@@ -5,6 +5,7 @@ import java.time.LocalDateTime;
 
 import com.codemate.alpha.entity.User;
 
+@SuppressWarnings("unused")
 @Entity
 @Table(name = "messages")
 public class Message {

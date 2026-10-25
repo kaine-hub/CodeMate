@@ -4,9 +4,9 @@ import jakarta.persistence.*;
 import java.time.LocalDateTime;
 
 import com.codemate.alpha.entity.User;
-import com.codemate.alpha.entity.PROJECT.Project;
 import com.codemate.alpha.entity.Project;
 
+@SuppressWarnings("unused")
 @Entity
 @Table(name = "apply_to_a_project")
 public class ApplyToProject {

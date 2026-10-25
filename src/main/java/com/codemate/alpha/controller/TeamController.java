@@ -13,154 +13,205 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 
 @RestController
 @RequestMapping("/api/teams")
 public class TeamController {
+
     private static final String OPEN = "OPEN";
     private static final String CLOSED = "CLOSED";
+
     private final TeamRepository teamRepository;
     private final TeamMemberRepository teamMemberRepository;
     private final UserRepository userRepository;
     private final ProjectRepository projectRepository;
 
-    public TeamController(TeamRepository teamRepository, TeamMemberRepository teamMemberRepository,
-                          UserRepository userRepository, ProjectRepository projectRepository) {
+    public TeamController(TeamRepository teamRepository,
+                          TeamMemberRepository teamMemberRepository,
+                          UserRepository userRepository,
+                          ProjectRepository projectRepository) {
         this.teamRepository = teamRepository;
         this.teamMemberRepository = teamMemberRepository;
         this.userRepository = userRepository;
         this.projectRepository = projectRepository;
     }
 
-    private Map<String, Object> teamData(Team team) {
-        Map<String, Object> data = new LinkedHashMap<>();
-        data.put("teamId", team.getTeamId());
-        data.put("leaderUserId", team.getLeader().getUserId());
-        data.put("leaderName", team.getLeader().getFirstName() + " " + team.getLeader().getLastName());
-        data.put("teamName", team.getTeamName());
-        data.put("maxMembers", team.getMaxMembers());
-        data.put("currentMembers", team.getCurrentMembers());
-        data.put("recruitmentStatus", team.getRecruitmentStatus());
-        return data;
-    }
-
-    private Map<String, Object> memberData(TeamMember member) {
-        Map<String, Object> data = new LinkedHashMap<>();
-        data.put("teamMemberId", member.getTeamMemberId());
-        data.put("teamId", member.getTeam().getTeamId());
-        data.put("teamName", member.getTeam().getTeamName());
-        data.put("userId", member.getUser().getUserId());
-        data.put("firstName", member.getUser().getFirstName());
-        data.put("lastName", member.getUser().getLastName());
-        data.put("email", member.getUser().getEmail());
-        data.put("leader", member.getTeam().getLeader().getUserId().equals(member.getUser().getUserId()));
-        data.put("joinedAt", member.getJoinedAt());
-        return data;
-    }
-
+    // GET ALL TEAMS (optional filter: ?status=OPEN or ?status=CLOSED)
     @GetMapping
-    public ResponseEntity<List<Map<String, Object>>> getAllTeams(@RequestParam(required = false) String status) {
-        List<Team> teams = (status == null || status.isBlank()) ? teamRepository.findAll()
+    public ResponseEntity<List<Team>> getAllTeams(@RequestParam(required = false) String status) {
+        List<Team> teams = (status == null || status.isBlank())
+                ? teamRepository.findAll()
                 : teamRepository.findByRecruitmentStatusIgnoreCase(status.trim());
-        return ResponseEntity.ok(teams.stream().map(this::teamData).toList());
+        return ResponseEntity.ok(teams);
     }
 
+    // GET TEAM BY ID
     @GetMapping("/{id}")
     public ResponseEntity<?> getTeamById(@PathVariable Long id) {
-        Team team = teamRepository.findById(id).orElse(null);
-        return team == null ? ResponseEntity.status(HttpStatus.NOT_FOUND).body("Team not found with id: " + id)
-                : ResponseEntity.ok(teamData(team));
+        return teamRepository.findById(id)
+                .<ResponseEntity<?>>map(team -> ResponseEntity.ok(team))
+                .orElse(ResponseEntity.status(HttpStatus.NOT_FOUND).body("Team not found with id: " + id));
     }
 
+    // GET TEAMS LED BY A USER
     @GetMapping("/leader/{userId}")
-    public ResponseEntity<List<Map<String, Object>>> getTeamsByLeader(@PathVariable Long userId) {
-        return ResponseEntity.ok(teamRepository.findByLeader_UserId(userId).stream().map(this::teamData).toList());
+    public ResponseEntity<List<Team>> getTeamsByLeader(@PathVariable Long userId) {
+        return ResponseEntity.ok(teamRepository.findByLeader_UserId(userId));
     }
 
+    // GET ALL TEAMS A USER BELONGS TO
     @GetMapping("/user/{userId}")
-    public ResponseEntity<List<Map<String, Object>>> getTeamsByMember(@PathVariable Long userId) {
-        return ResponseEntity.ok(teamMemberRepository.findByUser_UserId(userId).stream()
-                .map(tm -> teamData(tm.getTeam())).toList());
+    public ResponseEntity<List<Team>> getTeamsByMember(@PathVariable Long userId) {
+        return ResponseEntity.ok(
+                teamMemberRepository.findByUser_UserId(userId)
+                        .stream()
+                        .map(TeamMember::getTeam)
+                        .toList());
     }
 
+    // GET MEMBERS OF A TEAM
     @GetMapping("/{id}/members")
     public ResponseEntity<?> getTeamMembers(@PathVariable Long id) {
-        if (!teamRepository.existsById(id)) return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Team not found with id: " + id);
-        return ResponseEntity.ok(teamMemberRepository.findByTeam_TeamId(id).stream().map(this::memberData).toList());
+        if (!teamRepository.existsById(id)) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Team not found with id: " + id);
+        }
+        return ResponseEntity.ok(teamMemberRepository.findByTeam_TeamId(id));
     }
 
-    // Example body: {"teamName":"Alpha","maxMembers":5,"leader":{"userId":1}}
+    // CREATE TEAM
+    // Body: { "teamName": "Alpha", "maxMembers": 5, "leader": { "userId": 1 } }
+    // The leader is automatically added as the first team member.
     @PostMapping
     @Transactional
     public ResponseEntity<?> createTeam(@RequestBody Team team) {
-        if (team.getTeamName() == null || team.getTeamName().trim().isEmpty()) return ResponseEntity.badRequest().body("Team name is required");
-        if (team.getTeamName().trim().length() > 100) return ResponseEntity.badRequest().body("Team name must be at most 100 characters");
-        if (team.getMaxMembers() == null || team.getMaxMembers() < 1) return ResponseEntity.badRequest().body("Max members is required and must be at least 1");
-        if (team.getLeader() == null || team.getLeader().getUserId() == null) return ResponseEntity.badRequest().body("Leader (leader.userId) is required");
-        Long leaderId = team.getLeader().getUserId();
-        User leader = userRepository.findById(leaderId).orElse(null);
-        if (leader == null) return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Leader not found with id: " + leaderId);
-        String status = team.getRecruitmentStatus() == null || team.getRecruitmentStatus().isBlank() ? OPEN : team.getRecruitmentStatus().trim().toUpperCase();
-        if (!status.equals(OPEN) && !status.equals(CLOSED)) return ResponseEntity.badRequest().body("Recruitment status must be OPEN or CLOSED");
+
+        if (team.getTeamName() == null || team.getTeamName().trim().isEmpty()) {
+            return ResponseEntity.badRequest().body("Team name is required");
+        }
+        if (team.getTeamName().trim().length() > 100) {
+            return ResponseEntity.badRequest().body("Team name must be at most 100 characters");
+        }
+        if (team.getMaxMembers() == null || team.getMaxMembers() < 1) {
+            return ResponseEntity.badRequest().body("Max members is required and must be at least 1");
+        }
+        if (team.getLeader() == null || team.getLeader().getUserId() == null) {
+            return ResponseEntity.badRequest().body("Leader (leader.userId) is required");
+        }
+
+        User leader = userRepository.findById(team.getLeader().getUserId()).orElse(null);
+        if (leader == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body("Leader not found with id: " + team.getLeader().getUserId());
+        }
+
+        String status = OPEN;
+        if (team.getRecruitmentStatus() != null && !team.getRecruitmentStatus().isBlank()) {
+            status = team.getRecruitmentStatus().trim().toUpperCase();
+            if (!status.equals(OPEN) && !status.equals(CLOSED)) {
+                return ResponseEntity.badRequest().body("Recruitment status must be OPEN or CLOSED");
+            }
+        }
+
         Team newTeam = new Team();
         newTeam.setTeamName(team.getTeamName().trim());
         newTeam.setMaxMembers(team.getMaxMembers());
         newTeam.setLeader(leader);
-        newTeam.setCurrentMembers((short) 1);
+        newTeam.setCurrentMembers((short) 1); // the leader
+        // A team that is already full at creation (maxMembers = 1) can't recruit
         newTeam.setRecruitmentStatus(team.getMaxMembers() <= 1 ? CLOSED : status);
+
         Team saved = teamRepository.save(newTeam);
+
         TeamMember leaderMember = new TeamMember();
         leaderMember.setTeam(saved);
         leaderMember.setUser(leader);
         leaderMember.setJoinedAt(LocalDateTime.now());
         teamMemberRepository.save(leaderMember);
-        return ResponseEntity.status(HttpStatus.CREATED).body(teamData(saved));
+
+        return ResponseEntity.status(HttpStatus.CREATED).body(saved);
     }
 
+    // UPDATE TEAM (name, maxMembers, recruitmentStatus). Leader and currentMembers can't be changed here.
     @PutMapping("/{id}")
     @Transactional
     public ResponseEntity<?> updateTeam(@PathVariable Long id, @RequestBody Team updated) {
+
         Team existing = teamRepository.findById(id).orElse(null);
-        if (existing == null) return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Team not found with id: " + id);
-        if (updated.getTeamName() != null) {
-            String name = updated.getTeamName().trim();
-            if (name.isEmpty() || name.length() > 100) return ResponseEntity.badRequest().body("Team name must be 1-100 characters");
-            existing.setTeamName(name);
+        if (existing == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Team not found with id: " + id);
         }
+
+        if (updated.getTeamName() != null) {
+            if (updated.getTeamName().trim().isEmpty() || updated.getTeamName().trim().length() > 100) {
+                return ResponseEntity.badRequest().body("Team name must be 1-100 characters");
+            }
+            existing.setTeamName(updated.getTeamName().trim());
+        }
+
         if (updated.getMaxMembers() != null) {
-            if (updated.getMaxMembers() < existing.getCurrentMembers()) return ResponseEntity.badRequest().body("Max members cannot be less than current members (" + existing.getCurrentMembers() + ")");
+            if (updated.getMaxMembers() < existing.getCurrentMembers()) {
+                return ResponseEntity.badRequest()
+                        .body("Max members cannot be less than current members (" + existing.getCurrentMembers() + ")");
+            }
             existing.setMaxMembers(updated.getMaxMembers());
         }
+
         if (updated.getRecruitmentStatus() != null) {
             String status = updated.getRecruitmentStatus().trim().toUpperCase();
-            if (!status.equals(OPEN) && !status.equals(CLOSED)) return ResponseEntity.badRequest().body("Recruitment status must be OPEN or CLOSED");
-            if (status.equals(OPEN) && existing.getCurrentMembers() >= existing.getMaxMembers()) return ResponseEntity.badRequest().body("Team is full, cannot open recruitment");
+            if (!status.equals(OPEN) && !status.equals(CLOSED)) {
+                return ResponseEntity.badRequest().body("Recruitment status must be OPEN or CLOSED");
+            }
+            if (status.equals(OPEN) && existing.getCurrentMembers() >= existing.getMaxMembers()) {
+                return ResponseEntity.badRequest().body("Team is full, cannot open recruitment");
+            }
             existing.setRecruitmentStatus(status);
         }
-        return ResponseEntity.ok(teamData(teamRepository.save(existing)));
+
+        // NEW: lowering max to equal current must not leave the team "open but full"
+        if (existing.getCurrentMembers() >= existing.getMaxMembers()) {
+            existing.setRecruitmentStatus(CLOSED);
+        }
+
+        return ResponseEntity.ok(teamRepository.save(existing));
     }
 
+    // OPEN / CLOSE RECRUITMENT: PATCH /api/teams/{id}/recruitment-status?status=CLOSED
     @PatchMapping("/{id}/recruitment-status")
     @Transactional
-    public ResponseEntity<?> updateRecruitmentStatus(@PathVariable Long id, @RequestParam String status) {
+    public ResponseEntity<?> updateRecruitmentStatus(@PathVariable Long id,
+                                                     @RequestParam String status) {
         Team team = teamRepository.findById(id).orElse(null);
-        if (team == null) return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Team not found with id: " + id);
+        if (team == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Team not found with id: " + id);
+        }
+
         String newStatus = status.trim().toUpperCase();
-        if (!newStatus.equals(OPEN) && !newStatus.equals(CLOSED)) return ResponseEntity.badRequest().body("Recruitment status must be OPEN or CLOSED");
-        if (newStatus.equals(OPEN) && team.getCurrentMembers() >= team.getMaxMembers()) return ResponseEntity.badRequest().body("Team is full, cannot open recruitment");
+        if (!newStatus.equals(OPEN) && !newStatus.equals(CLOSED)) {
+            return ResponseEntity.badRequest().body("Recruitment status must be OPEN or CLOSED");
+        }
+        if (newStatus.equals(OPEN) && team.getCurrentMembers() >= team.getMaxMembers()) {
+            return ResponseEntity.badRequest().body("Team is full, cannot open recruitment");
+        }
+
         team.setRecruitmentStatus(newStatus);
-        return ResponseEntity.ok(teamData(teamRepository.save(team)));
+        return ResponseEntity.ok(teamRepository.save(team));
     }
 
+    // DELETE TEAM (also removes its members). Blocked if projects still belong to the team.
     @DeleteMapping("/{id}")
     @Transactional
     public ResponseEntity<?> deleteTeam(@PathVariable Long id) {
         Team team = teamRepository.findById(id).orElse(null);
-        if (team == null) return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Team not found with id: " + id);
-        if (projectRepository.existsById(id)) return ResponseEntity.status(HttpStatus.CONFLICT).body("Cannot delete team: it still has projects. Delete the projects first.");
+        if (team == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Team not found with id: " + id);
+        }
+
+        if (projectRepository.existsByTeam_TeamId(id)) {
+            return ResponseEntity.status(HttpStatus.CONFLICT)
+                    .body("Cannot delete team: it still has projects. Delete the projects first.");
+        }
+
         teamMemberRepository.deleteAll(teamMemberRepository.findByTeam_TeamId(id));
         teamRepository.delete(team);
         return ResponseEntity.noContent().build();

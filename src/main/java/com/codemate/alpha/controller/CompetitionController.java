@@ -18,9 +18,7 @@ import java.util.Set;
 @RequestMapping("/api/competitions")
 public class CompetitionController {
 
-    private static final Set<String> COMPETITION_STATUSES = Set.of("UPCOMING", "ONGOING", "COMPLETED"); // <- put your
-                                                                                                        // real values
-                                                                                                        // here
+    private static final Set<String> COMPETITION_STATUSES = Set.of("UPCOMING", "ONGOING", "COMPLETED"); 
 
     @Autowired
     private CompetitionRepository competitionRepository;
@@ -55,9 +53,7 @@ public class CompetitionController {
         }
     }
 
-    // call only after isValidHttpUrl passed.
-    // lowercases scheme+host, drops trailing slash and #fragment so formatting
-    // can't dodge duplicate checks
+   
     private static String normalizeUrl(String value) {
         URI u = URI.create(value.trim());
         String path = u.getRawPath() == null ? "" : u.getRawPath();
@@ -150,7 +146,7 @@ public class CompetitionController {
         if (problem != null)
             return bad(problem);
 
-        competition.setCompetitionId(null); // never let POST overwrite an existing row
+        competition.setCompetitionId(null); // never let post overwrite an existing row
         competition.setCategory(category);
         competition.setCompetitionName(name);
         competition.setWebsite(website);
@@ -212,7 +208,7 @@ public class CompetitionController {
                 return bad("Invalid competition status. Allowed: " + COMPETITION_STATUSES);
         }
 
-        // everything passed, now apply
+        // everything passed, now fill
         existing.setCategory(category);
         existing.setCompetitionName(name);
         existing.setWebsite(website);
